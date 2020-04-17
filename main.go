@@ -86,8 +86,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	fmt.Println("Command", m.Content, "in channel", string(m.ChannelID), "in guild", string(m.GuildID))
-
 	// If the message is "ping" reply with "Pong!"
 	if m.Content == prefix+"ping" {
 		mtime, err := discordgo.SnowflakeTimestamp(m.ID)
@@ -109,6 +107,22 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		buffer := bytes.NewBuffer([]byte{})
 		graph.Render(chart.PNG, buffer)
 		_, err := s.ChannelFileSend(m.ChannelID, "graph.png", buffer)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if m.Content == prefix+"help" {
+		_, err := s.ChannelMessageSend(
+			m.ChannelID,
+			`
+		Usage:
+		!cs: graph of channel activity over time
+		!cs graph: sample graph
+		!cs ping: timed ping to server
+		!cs help: show this help 
+			`,
+		)
 		if err != nil {
 			log.Fatal(err)
 		}

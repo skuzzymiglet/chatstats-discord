@@ -1,10 +1,17 @@
 # chatstats - chat statictics for Discord
 
-Get all kinds of insight into your server
+Get all kinds of insights into your server
 
-# TODO
+# TODO features
 
 + [X] Ping
 + [X] Sample graph
 + [ ] Core functionality
-+ [ ] Host this thing somewhere
+
+# TODO (dev)
+
++ [ ] Hosting
++ [ ] Log
++ [ ] Use `time.Timer` for ping
++ [ ] Time everything
++ [ ] Move commands to `commands.go`
