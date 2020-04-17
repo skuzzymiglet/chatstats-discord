@@ -54,11 +54,31 @@ func main() {
 	dg.Close()
 }
 
+func countByDate(messages []*discordgo.Message) map[time.Time]int {
+	byDate := make(map[time.Time]int)
+	for _, m := range messages {
+		t, err := discordgo.SnowflakeTimestamp(m.ID)
+		if err != nil {
+			log.Fatal(err)
+		}
+		d := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+		_, ok := byDate[d]
+		if !ok {
+			byDate[d] = 1
+		} else {
+			byDate[d]++
+		}
+	}
+	return byDate
+}
+
 var mtime time.Time
 
 // This function will be called (due to AddHandler above) every time a new
 // message is created on any channel that the autenticated bot has access to.
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+
+	prefix := "!cs "
 
 	// Ignore all messages created by the bot itself
 	// This isn't required in this specific example but it's a good practice.
@@ -66,8 +86,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	fmt.Println("Command", m.Content, "in channel", string(m.ChannelID), "in guild", string(m.GuildID))
+
 	// If the message is "ping" reply with "Pong!"
-	if m.Content == "ping" {
+	if m.Content == prefix+"ping" {
 		mtime, err := discordgo.SnowflakeTimestamp(m.ID)
 		if err != nil {
 			log.Fatal(err)
@@ -75,7 +97,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Time: %v\n", time.Now().Sub(mtime)))
 	}
 
-	if m.Content == "graph" {
+	if m.Content == prefix+"graph" {
 		graph := chart.Chart{
 			Series: []chart.Series{
 				chart.ContinuousSeries{
@@ -86,10 +108,37 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		buffer := bytes.NewBuffer([]byte{})
 		graph.Render(chart.PNG, buffer)
-		m, err := s.ChannelFileSend(m.ChannelID, "graph.png", buffer)
+		_, err := s.ChannelFileSend(m.ChannelID, "graph.png", buffer)
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Println(m)
+	}
+
+	if m.Content == "!cs" {
+		log.Println("Creating default graph")
+		msgs, err := s.ChannelMessages(m.ChannelID, 100, "", "", "")
+		if err != nil {
+			log.Fatal(err)
+		}
+		var keys []time.Time
+		var values []float64
+		for k, v := range countByDate(msgs) {
+			keys = append(keys, k)
+			values = append(values, float64(v))
+		}
+		graph := chart.Chart{
+			Series: []chart.Series{
+				chart.TimeSeries{
+					XValues: keys,
+					YValues: values,
+				},
+			},
+		}
+		buffer := bytes.NewBuffer([]byte{})
+		graph.Render(chart.PNG, buffer)
+		_, err = s.ChannelFileSend(m.ChannelID, "graph.png", buffer)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
